@@ -167,7 +167,7 @@ class ArtifactReader():
         # 文字を読み取る
         self.img = img
         self.builder = pyocr.builders.TextBuilder(tesseract_layout=6)
-        self.result = self.tool.image_to_string(self.img,lang="jpn", builder=self.builder)
+        self.result = self.tool.image_to_string(self.img,lang="eng", builder=self.builder)
 
         self.option = 0
         self.is_crit_dmg = False

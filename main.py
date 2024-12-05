@@ -1,4 +1,5 @@
 from flask import *
+from flask_cors import CORS
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -18,6 +19,8 @@ NUMS_DEFAULT = np.array([41, 47, 53, 58, 54, 62, 70, 78, 54, 62, 70, 78, 0, 0, 0
 FONT_TYPE = "meiryo"
 
 app = Flask(__name__)
+
+CORS(app)
 
 @app.route("/", methods=["GET", "POST"])
 def hello_world():

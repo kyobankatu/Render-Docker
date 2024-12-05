@@ -148,21 +148,14 @@ def get_data():
 class ArtifactReader():
     def __init__(self, img):
         # OCR設定
-        #Tesseractのインストール場所をOSに教える
-        self.tesseract_path = self.resource_path("Tesseract")
-        if self.tesseract_path not in os.environ["PATH"].split(os.pathsep):
-            os.environ["PATH"] += os.pathsep + self.tesseract_path
-        tesseract_cmd = os.path.join(self.tesseract_path, "tesseract.exe")
-        pyocr.tesseract.TESSERACT_CMD = tesseract_cmd
         self.tools = pyocr.get_available_tools()
-        print(pyocr.tesseract.TESSERACT_CMD)
-        print(os.environ["PATH"])
         #OCRエンジンを取得する
         if len(self.tools) == 0:
             print("OCRエンジンが指定されていません")
             sys.exit(1)
         else:
             self.tool = self.tools[0]
+        print("テストテストテストテスト")
         
         # 文字を読み取る
         self.img = img

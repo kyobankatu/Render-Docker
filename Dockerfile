@@ -10,11 +10,12 @@ RUN apt-get update && apt-get install -y \
 # 作業ディレクトリを設定
 WORKDIR /app
 
-# プロジェクトファイルをコンテナにコピー
-COPY . /app
+# 必要なファイルをコンテナにコピー
+COPY requirements.txt /app/requirements.txt
+COPY main.py /app/main.py
 
 # Pythonライブラリをインストール
 RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションのエントリーポイント
-CMD ["python", "app.py"]
+CMD ["python", "main.py"]

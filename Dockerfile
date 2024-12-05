@@ -4,7 +4,7 @@ FROM python:3.9-slim
 # 必要なLinuxパッケージをインストール
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
-    tesseract-ocr-jpn \  # 日本語言語データを追加
+    tesseract-ocr-jpn \
     libtesseract-dev \
     && apt-get clean
 

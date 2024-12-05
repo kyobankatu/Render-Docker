@@ -1,0 +1,7 @@
+Flask
+Gunicorn
+numpy
+matplotlib
+pillow
+pyocr
+tesseract

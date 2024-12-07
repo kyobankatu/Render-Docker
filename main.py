@@ -14,7 +14,8 @@ import pyocr.tesseract
 
 # 定数
 CRIT = np.array([54, 62, 70, 78])
-ATK = np.array([41, 47, 53, 58])    # HPも共通
+ATK = np.array([41, 47, 53, 58])
+HP = np.array([41, 47, 53, 58])
 NUMS_DEFAULT = np.array([41, 47, 53, 58, 54, 62, 70, 78, 54, 62, 70, 78, 0, 0, 0, 0])
 FONT_TYPE = "meiryo"
 
@@ -34,9 +35,12 @@ def scan_img():
     # 画像をPIL形式で開く
     img = Image.open(file)
 
-    res = ArtifactReader(img)
+    # POSTリクエストから追加のJSONデータを取得
+    score_type = request.form.get('score_type')
 
-    return jsonify({"option" : res.option, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "init" : res.init_score})
+    res = ArtifactReader(img, score_type)
+
+    return jsonify({"option" : res.option, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "init" : res.init_score, "score_type" : res.score_type})
 
 @app.route("/get-dist", methods=["POST"])
 def get_dist():
@@ -47,22 +51,26 @@ def get_dist():
     is_crit_dmg = bool(data['crit_dmg'])
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
+    is_hp = bool(data['hp'])
     init_score = float(data['init'])
     score = float(data['score'])
     count = int(data['count'])
+    score_type = data['score_type']
 
     # NUMSをリセット
     nums = np.copy(NUMS_DEFAULT)
 
     # オプションに応じてNUMSを調整
-    if not is_atk:
+    if score_type == "atk" and not is_atk:
+        nums[0:4] = 0
+    if score_type == "hp" and not is_hp:
         nums[0:4] = 0
     if not is_crit_dmg:
         nums[4:8] = 0
     if not is_crit_rate:
         nums[8:12] = 0
 
-    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, nums, init_score, score, count)
+    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, nums, init_score, score, count, score_type)
     y = calc.calculate()
     x = np.zeros(y.shape[0])
     for i in range(x.shape[0]):
@@ -89,22 +97,26 @@ def get_data():
     is_crit_dmg = bool(data['crit_dmg'])
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
+    is_hp = bool(data['hp'])
     init_score = float(data['init'])
     score = float(data['score'])
     count = int(data['count'])
+    score_type = data['score_type']
 
     # NUMSをリセット
     nums = np.copy(NUMS_DEFAULT)
 
     # オプションに応じてNUMSを調整
-    if not is_atk:
+    if score_type == "atk" and not is_atk:
+        nums[0:4] = 0
+    if score_type == "hp" and not is_hp:
         nums[0:4] = 0
     if not is_crit_dmg:
         nums[4:8] = 0
     if not is_crit_rate:
         nums[8:12] = 0
 
-    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, nums, init_score, score, count)
+    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, nums, init_score, score, count, score_type)
     y = calc.calculate()
     x = np.zeros(y.shape[0])
     for i in range(x.shape[0]):
@@ -149,7 +161,7 @@ def get_data():
     return jsonify({"percentile" : percentile, "average" : ave, "variance" : variance, "skewness" : skewness, "kurtosis" : kurtosis})
 
 class ArtifactReader():
-    def __init__(self, img):
+    def __init__(self, img, score_type):
         # OCR設定
         self.tools = pyocr.get_available_tools()
         #OCRエンジンを取得する
@@ -170,6 +182,7 @@ class ArtifactReader():
         self.is_atk = False
         self.is_hp = False
         self.init_score = 0
+        self.score_type = score_type
 
         # オプション数
         self.option = len(self.find(self.result, r'\+'))
@@ -185,7 +198,10 @@ class ArtifactReader():
             self.is_hp = True
 
         # 初期スコア
-        self.init_score = self.getScore_attack(self.result)
+        if score_type == "atk" :
+            self.init_score = self.getScore_attack(self.result)
+        elif score_type == "hp" :
+            self.init_score = self.getScore_hp(self.result)
     
     def resource_path(self, relative_path):
         if hasattr(sys, '_MEIPASS'):
@@ -228,15 +244,17 @@ class ArtifactReader():
         return self.getFigure(self.find(result,r'HP\+')) > 0
 
 class Calculator():
-    def __init__(self, option, is_crit_dmg, is_crit_rate, is_atk, nums, init_score, score, count):
+    def __init__(self, option, is_crit_dmg, is_crit_rate, is_atk, is_hp, nums, init_score, score, count, score_type):
         self.option = option
         self.is_crit_dmg = is_crit_dmg
         self.is_crit_rate = is_crit_rate
         self.is_atk = is_atk
+        self.is_hp = is_hp
         self.nums = nums
         self.init_score = init_score
         self.score = score
         self.count = count
+        self.score_type = score_type
 
     # スコアの伸びの分布を計算 (indexが伸び幅の10倍整数)
     def getDistribution(self, nums, count):
@@ -280,9 +298,13 @@ class Calculator():
                 tmp = np.copy(self.nums)
                 tmp[12:] = CRIT
                 nums_4op.append(tmp)
-            if not self.is_atk:
+            if self.score_type == "atk" and not self.is_atk:
                 tmp = np.copy(self.nums)
                 tmp[12:] = ATK
+                nums_4op.append(tmp)
+            if self.score_type == "hp" and not self.is_hp:
+                tmp = np.copy(self.nums)
+                tmp[12:] = HP
                 nums_4op.append(tmp)
 
             main_probability = (7 - len(nums_4op)) / 7

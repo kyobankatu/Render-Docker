@@ -47,8 +47,8 @@ def get_dist():
     is_crit_dmg = bool(data['crit_dmg'])
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
-    init_score = int(data['init'])
-    score = int(data['score'])
+    init_score = float(data['init'])
+    score = float(data['score'])
     count = int(data['count'])
 
     # NUMSをリセット
@@ -89,8 +89,8 @@ def get_data():
     is_crit_dmg = bool(data['crit_dmg'])
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
-    init_score = int(data['init'])
-    score = int(data['score'])
+    init_score = float(data['init'])
+    score = float(data['score'])
     count = int(data['count'])
 
     # NUMSをリセット

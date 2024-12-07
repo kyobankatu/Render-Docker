@@ -14,7 +14,7 @@ import pyocr.tesseract
 
 # 定数
 CRIT = np.array([54, 62, 70, 78])
-ATK = np.array([41, 47, 53, 58])
+ATK = np.array([41, 47, 53, 58])    # HPも共通
 NUMS_DEFAULT = np.array([41, 47, 53, 58, 54, 62, 70, 78, 54, 62, 70, 78, 0, 0, 0, 0])
 FONT_TYPE = "meiryo"
 
@@ -158,7 +158,6 @@ class ArtifactReader():
             sys.exit(1)
         else:
             self.tool = self.tools[0]
-        print("テストテストテストテスト")
         
         # 文字を読み取る
         self.img = img
@@ -169,6 +168,7 @@ class ArtifactReader():
         self.is_crit_dmg = False
         self.is_crit_rate = False
         self.is_atk = False
+        self.is_hp = False
         self.init_score = 0
 
         # オプション数
@@ -181,10 +181,11 @@ class ArtifactReader():
             self.is_crit_rate = True
         if self.contains_atk(self.result):
             self.is_atk = True
+        if self.contains_hp(self.result):
+            self.is_hp = True
 
         # 初期スコア
         self.init_score = self.getScore_attack(self.result)
-    
     
     def resource_path(self, relative_path):
         if hasattr(sys, '_MEIPASS'):
@@ -207,6 +208,13 @@ class ArtifactReader():
         score += self.getFigure(self.find(result,r'攻撃力\+'))
         return round(score,1)
     
+    def getScore_hp(self, result):
+        score = 0
+        score += self.getFigure(self.find(result,r'会心ダメージ\+'))
+        score += self.getFigure(self.find(result,r'会心率\+')) * 2
+        score += self.getFigure(self.find(result,r'HP\+'))
+        return round(score,1)
+    
     def contains_crti_dmg(self, result):
         return self.getFigure(self.find(result,r'会心ダメージ\+')) > 0
     
@@ -215,6 +223,9 @@ class ArtifactReader():
     
     def contains_atk(self, result):
         return self.getFigure(self.find(result,r'攻撃力\+')) > 0
+
+    def contains_hp(self, result):
+        return self.getFigure(self.find(result,r'HP\+')) > 0
 
 class Calculator():
     def __init__(self, option, is_crit_dmg, is_crit_rate, is_atk, nums, init_score, score, count):
@@ -285,9 +296,9 @@ class Calculator():
             y[0:main_y.shape[0]] += main_y * main_probability
 
             for nums in nums_4op:
-                for num_4th in nums:
-                    sub_y = self.getDistribution(nums, self.count - 1)
-                    y[num_4th:num_4th + sub_y.shape[0]] += sub_y / len(nums) * sub_probability
+                sub_y = self.getDistribution(nums, self.count - 1)
+                for num_4th in nums[12:]:
+                    y[num_4th:num_4th + sub_y.shape[0]] += sub_y / len(nums[12:]) * sub_probability
 
             return y
 

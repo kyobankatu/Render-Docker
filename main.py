@@ -16,6 +16,7 @@ import pyocr.tesseract
 CRIT = np.array([54, 62, 70, 78])
 ATK = np.array([41, 47, 53, 58])
 HP = np.array([41, 47, 53, 58])
+EM = np.array([40, 48, 52, 58])
 NUMS_DEFAULT = np.array([41, 47, 53, 58, 54, 62, 70, 78, 54, 62, 70, 78, 0, 0, 0, 0])
 FONT_TYPE = "meiryo"
 
@@ -40,7 +41,7 @@ def scan_img():
 
     res = ArtifactReader(img, score_type)
 
-    return jsonify({"option" : res.option, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "init" : res.init_score, "score_type" : res.score_type})
+    return jsonify({"option" : res.option, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
 
 @app.route("/get-dist", methods=["POST"])
 def get_dist():
@@ -52,6 +53,7 @@ def get_dist():
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
     is_hp = bool(data['hp'])
+    is_em = bool(data['em'])
     init_score = float(data['init'])
     score = float(data['score'])
     count = int(data['count'])
@@ -59,18 +61,23 @@ def get_dist():
 
     # NUMSをリセット
     nums = np.copy(NUMS_DEFAULT)
+    # score_typeが熟知なら変更
+    if score_type == "em" :
+        nums[0:4] = EM
 
     # オプションに応じてNUMSを調整
     if score_type == "atk" and not is_atk:
         nums[0:4] = 0
     if score_type == "hp" and not is_hp:
         nums[0:4] = 0
+    if score_type == "e" and not is_em:
+        nums[0:4] = 0
     if not is_crit_dmg:
         nums[4:8] = 0
     if not is_crit_rate:
         nums[8:12] = 0
 
-    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, nums, init_score, score, count, score_type)
+    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type)
     y = calc.calculate()
     x = np.zeros(y.shape[0])
     for i in range(x.shape[0]):
@@ -98,6 +105,7 @@ def get_data():
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
     is_hp = bool(data['hp'])
+    is_em = bool(data['em'])
     init_score = float(data['init'])
     score = float(data['score'])
     count = int(data['count'])
@@ -105,18 +113,23 @@ def get_data():
 
     # NUMSをリセット
     nums = np.copy(NUMS_DEFAULT)
+    # score_typeが熟知なら変更
+    if score_type == "em" :
+        nums[0:4] = EM
 
     # オプションに応じてNUMSを調整
     if score_type == "atk" and not is_atk:
         nums[0:4] = 0
     if score_type == "hp" and not is_hp:
         nums[0:4] = 0
+    if score_type == "em" and not is_em:
+        nums[0:4] = 0
     if not is_crit_dmg:
         nums[4:8] = 0
     if not is_crit_rate:
         nums[8:12] = 0
 
-    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, nums, init_score, score, count, score_type)
+    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type)
     y = calc.calculate()
     x = np.zeros(y.shape[0])
     for i in range(x.shape[0]):
@@ -181,6 +194,7 @@ class ArtifactReader():
         self.is_crit_rate = False
         self.is_atk = False
         self.is_hp = False
+        self.is_em = False
         self.init_score = 0
         self.score_type = score_type
 
@@ -196,12 +210,16 @@ class ArtifactReader():
             self.is_atk = True
         if self.contains_hp(self.result):
             self.is_hp = True
+        if self.contains_em(self.result):
+            self.is_em = True
 
         # 初期スコア
         if score_type == "atk" :
             self.init_score = self.getScore_attack(self.result)
         elif score_type == "hp" :
             self.init_score = self.getScore_hp(self.result)
+        elif score_type == "em" :
+            self.init_score = self.getScore_em(self.result)
     
     def resource_path(self, relative_path):
         if hasattr(sys, '_MEIPASS'):
@@ -216,6 +234,10 @@ class ArtifactReader():
             if(str.find('%') != -1):
                 return float(str.split('%')[0])
         return 0
+    
+    def getFigure_em(data):
+        for str in data:
+            return float(re.sub(r'\D', '', str))
 
     def getScore_attack(self, result):
         score = 0
@@ -230,6 +252,13 @@ class ArtifactReader():
         score += self.getFigure(self.find(result,r'会心率\+')) * 2
         score += self.getFigure(self.find(result,r'HP\+'))
         return round(score,1)
+
+    def getScore_em(self, result):
+        score = 0
+        score += self.getFigure(self.find(result,r'会心ダメージ\+'))
+        score += self.getFigure(self.find(result,r'会心率\+')) * 2
+        score += self.getFigure_em(self.find(result,r'元素熟知\+')) / 4
+        return round(score,1)
     
     def contains_crti_dmg(self, result):
         return self.getFigure(self.find(result,r'会心ダメージ\+')) > 0
@@ -242,14 +271,18 @@ class ArtifactReader():
 
     def contains_hp(self, result):
         return self.getFigure(self.find(result,r'HP\+')) > 0
+    
+    def contains_em(self, result):
+        return self.getFigure_em(self.find(result,r'元素熟知\+')) > 0
 
 class Calculator():
-    def __init__(self, option, is_crit_dmg, is_crit_rate, is_atk, is_hp, nums, init_score, score, count, score_type):
+    def __init__(self, option, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type):
         self.option = option
         self.is_crit_dmg = is_crit_dmg
         self.is_crit_rate = is_crit_rate
         self.is_atk = is_atk
         self.is_hp = is_hp
+        self.is_em = is_em
         self.nums = nums
         self.init_score = init_score
         self.score = score
@@ -305,6 +338,10 @@ class Calculator():
             if self.score_type == "hp" and not self.is_hp:
                 tmp = np.copy(self.nums)
                 tmp[12:] = HP
+                nums_4op.append(tmp)
+            if self.score_type == "em" and not self.is_em:
+                tmp = np.copy(self.nums)
+                tmp[12:] = EM
                 nums_4op.append(tmp)
 
             main_probability = (7 - len(nums_4op)) / 7

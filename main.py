@@ -20,6 +20,17 @@ EM = np.array([40, 48, 52, 58])
 NUMS_DEFAULT = np.array([41, 47, 53, 58, 54, 62, 70, 78, 54, 62, 70, 78, 0, 0, 0, 0])
 FONT_TYPE = "meiryo"
 
+MAIN_OP = [("HP", "hp%"), 
+           ("攻撃力", "atk%"), 
+           ("防御力", "def%"), 
+           ("元素チャージ効率", "er"), 
+           ("元素熟知", "em"), 
+           ("元素ダメージ", "element"),
+           ("物理ダメージ", "physical"),
+           ("会心率", "crit-rate"),
+           ("会心ダメージ", "crit-dmg"),
+           ("治療効果", "heal")]
+
 app = Flask(__name__)
 
 CORS(app)
@@ -41,7 +52,7 @@ def scan_img():
 
     res = ArtifactReader(img, score_type)
 
-    return jsonify({"option" : res.option, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
+    return jsonify({"option" : res.option, "main_op" : res.main_op, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
 
 @app.route("/get-dist", methods=["POST"])
 def get_dist():
@@ -49,6 +60,7 @@ def get_dist():
     data = request.get_json()
 
     option = int(data['option'])
+    main_op = data['main_op']
     is_crit_dmg = bool(data['crit_dmg'])
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
@@ -77,7 +89,7 @@ def get_dist():
     if not is_crit_rate:
         nums[8:12] = 0
 
-    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type)
+    calc = Calculator(option, main_op, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type)
     y = calc.calculate()
     x = np.zeros(y.shape[0])
     for i in range(x.shape[0]):
@@ -101,6 +113,7 @@ def get_data():
     data = request.get_json()
 
     option = int(data['option'])
+    main_op = data['main_op']
     is_crit_dmg = bool(data['crit_dmg'])
     is_crit_rate = bool(data['crit_rate'])
     is_atk = bool(data['atk'])
@@ -129,7 +142,7 @@ def get_data():
     if not is_crit_rate:
         nums[8:12] = 0
 
-    calc = Calculator(option, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type)
+    calc = Calculator(option, main_op, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type)
     y = calc.calculate()
     x = np.zeros(y.shape[0])
     for i in range(x.shape[0]):
@@ -190,6 +203,7 @@ class ArtifactReader():
         self.result = self.tool.image_to_string(self.img,lang="jpn", builder=self.builder)
 
         self.option = 0
+        self.main_op = None
         self.is_crit_dmg = False
         self.is_crit_rate = False
         self.is_atk = False
@@ -200,6 +214,9 @@ class ArtifactReader():
 
         # オプション数
         self.option = len(self.find(self.result, r'\+'))
+
+        # メインオプション
+        self.main_op = self.getMainOption(self.result)
 
         # サブオプション
         if self.contains_crti_dmg(self.result):
@@ -220,6 +237,45 @@ class ArtifactReader():
             self.init_score = self.getScore_hp(self.result)
         elif score_type == "em" :
             self.init_score = self.getScore_em(self.result)
+    
+    def getTextAroundMainOp(self, text, word):
+        # 単語の終了位置を探す
+        start_idx = text.find(word)
+        start_idx += len(word)
+
+        # 文字列に%が含まれない場合(メインが元素熟知)
+        if not "%" in text[start_idx:]:
+            return "元素熟知"
+        # 単語の終了位置から%が出るまでの文字列を抽出(ここを\dで検知すると、誤検知する聖遺物がある)
+        match = re.search(r'%', text[start_idx:])
+        if match is not None:
+            res = text[start_idx:start_idx + match.start()]
+            if "元素熟知" in res:
+                res = "元素熟知"
+            return res
+        else:
+            return None
+
+    def getMainOption(self, result):
+        pos = ""
+        if "生の花" in result:
+            return "hp"
+        elif "死の羽" in result:
+            return "atk"
+        elif "時の砂" in result:
+            pos = "時の砂"
+        elif "空の杯" in result:
+            pos = "空の杯"
+        elif "理の冠" in result:
+            pos = "理の冠"
+
+        # 時計、杯、冠の場合
+        text_around_op = self.getTextAroundMainOp(result, pos)
+        for op in MAIN_OP:
+                if op[0] in text_around_op:
+                    return op[1]    
+        return None
+
     
     def resource_path(self, relative_path):
         if hasattr(sys, '_MEIPASS'):
@@ -277,8 +333,9 @@ class ArtifactReader():
         return self.getFigure_em(self.find(result,r'元素熟知\+')) > 0
 
 class Calculator():
-    def __init__(self, option, is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type):
+    def __init__(self, option, main_op , is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type):
         self.option = option
+        self.main_op = main_op
         self.is_crit_dmg = is_crit_dmg
         self.is_crit_rate = is_crit_rate
         self.is_atk = is_atk
@@ -324,23 +381,23 @@ class Calculator():
             return y
         else:
             nums_4op = []
-            if not self.is_crit_dmg:
+            if not self.is_crit_dmg and not self.main_op == "crit-dmg":
                 tmp = np.copy(self.nums)
                 tmp[12:] = CRIT
                 nums_4op.append(tmp)
-            if not self.is_crit_rate:
+            if not self.is_crit_rate and not self.main_op == "crit-rate":
                 tmp = np.copy(self.nums)
                 tmp[12:] = CRIT
                 nums_4op.append(tmp)
-            if self.score_type == "atk" and not self.is_atk:
+            if self.score_type == "atk" and not self.is_atk and not self.main_op == "atk%":
                 tmp = np.copy(self.nums)
                 tmp[12:] = ATK
                 nums_4op.append(tmp)
-            if self.score_type == "hp" and not self.is_hp:
+            if self.score_type == "hp" and not self.is_hp and not self.main_op == "hp%":
                 tmp = np.copy(self.nums)
                 tmp[12:] = HP
                 nums_4op.append(tmp)
-            if self.score_type == "em" and not self.is_em:
+            if self.score_type == "em" and not self.is_em and not self.main_op == "em":
                 tmp = np.copy(self.nums)
                 tmp[12:] = EM
                 nums_4op.append(tmp)

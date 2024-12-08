@@ -238,6 +238,7 @@ class ArtifactReader():
     def getFigure_em(self, data):
         for str in data:
             return float(re.sub(r'\D', '', str))
+        return 0
 
     def getScore_attack(self, result):
         score = 0

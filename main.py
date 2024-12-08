@@ -235,7 +235,7 @@ class ArtifactReader():
                 return float(str.split('%')[0])
         return 0
     
-    def getFigure_em(data):
+    def getFigure_em(self, data):
         for str in data:
             return float(re.sub(r'\D', '', str))
 

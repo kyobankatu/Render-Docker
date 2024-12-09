@@ -44,7 +44,7 @@ def hello_world():
 def scan_img():
     # POSTリクエストから画像を取得
     file_data = request.files['image'].read()
-    nparr = np.fromstring(file_data, np.uint8)
+    nparr = np.frombuffer(file_data, np.uint8)
     img_cv2 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     img_gray = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2GRAY)
@@ -60,11 +60,14 @@ def scan_img():
         img = cv2.cvtColor(img, COLOR_BGR2RGB)
     elif img.shape[2] == 4: # 透過
         img = cv2.cvtColor(img, COLOR_BGRA2RGBA)
+    
+    # numpy.ndarray を Pillow Image に変換
+    img_pil = Image.fromarray(img)
 
     # POSTリクエストから追加のJSONデータを取得
     score_type = request.form.get('score_type')
 
-    res = ArtifactReader(img, score_type)
+    res = ArtifactReader(img_pil, score_type)
 
     return jsonify({"option" : res.option, "main_op" : res.main_op, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
 

@@ -43,13 +43,9 @@ def hello_world():
 @app.route("/scan-img", methods=["POST"])
 def scan_img():
     # POSTリクエストから画像を取得
-    file = request.files['image']
-    # ファイルをNumPy配列に変換
-    # 画像データをバイト配列として読み込む
-    file_bytes = np.frombuffer(file.read(), np.uint8)
-    
-    # OpenCVで画像データをデコード
-    img_cv2 = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    file_data = request.files['image'].read()
+    nparr = np.fromstring(file_data, np.uint8)
+    img_cv2 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     img_gray = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2GRAY)
     # 閾値の設定

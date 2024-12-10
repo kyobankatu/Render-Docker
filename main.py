@@ -52,7 +52,7 @@ def scan_img():
 
     res = ArtifactReader(img, score_type)
 
-    return jsonify({"option" : res.option, "main_op" : res.main_op, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
+    return jsonify({"option" : res.option, "position" : res.pos, "main_op" : res.main_op, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
 
 @app.route("/get-dist", methods=["POST"])
 def get_dist():
@@ -203,6 +203,7 @@ class ArtifactReader():
         self.result = self.tool.image_to_string(self.img,lang="jpn", builder=self.builder)
 
         self.option = 0
+        self.pos = None
         self.main_op = None
         self.is_crit_dmg = False
         self.is_crit_rate = False
@@ -216,7 +217,7 @@ class ArtifactReader():
         self.option = len(self.find(self.result, r'\+'))
 
         # メインオプション
-        self.main_op = self.getMainOption(self.result)
+        (self.main_op, self.pos) = self.getMainOption(self.result)
 
         # サブオプション
         if self.contains_crti_dmg(self.result):
@@ -259,9 +260,9 @@ class ArtifactReader():
     def getMainOption(self, result):
         pos = ""
         if "生の花" in result:
-            return "hp"
+            return ("hp", "生の花")
         elif "死の羽" in result:
-            return "atk"
+            return ("atk", "死の羽")
         elif "時の砂" in result:
             pos = "時の砂"
         elif "空の杯" in result:
@@ -273,7 +274,7 @@ class ArtifactReader():
         text_around_op = self.getTextAroundMainOp(result, pos)
         for op in MAIN_OP:
                 if op[0] in text_around_op:
-                    return op[1]    
+                    return (op[1], pos)    
         return None
 
     

@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import pyocr
+import cv2
 import io
 import math
 import sys
@@ -42,15 +43,31 @@ def hello_world():
 @app.route("/scan-img", methods=["POST"])
 def scan_img():
     # POSTリクエストから画像を取得
-    file = request.files['image']
+    file_data = request.files['image'].read()
+    nparr = np.frombuffer(file_data, np.uint8)
+    img_cv2 = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    img_gray = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2GRAY)
+    # 閾値の設定
+    threshold = 150
+    # 二値化(閾値100を超えた画素を255にする。)
+    ret, img_edited = cv2.threshold(img_gray, threshold, 255, cv2.THRESH_BINARY)
     
-    # 画像をPIL形式で開く
-    img = Image.open(file)
+    img = img_edited.copy()
+    if img.ndim == 2: # モノクロ
+        pass
+    elif img.shape[2] == 3: # カラー
+        img = cv2.cvtColor(img, COLOR_BGR2RGB)
+    elif img.shape[2] == 4: # 透過
+        img = cv2.cvtColor(img, COLOR_BGRA2RGBA)
+    
+    # numpy.ndarray を Pillow Image に変換
+    img_pil = Image.fromarray(img)
 
     # POSTリクエストから追加のJSONデータを取得
     score_type = request.form.get('score_type')
 
-    res = ArtifactReader(img, score_type)
+    res = ArtifactReader(img_pil, score_type)
 
     return jsonify({"option" : res.option, "position" : res.pos, "main_op" : res.main_op, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
 

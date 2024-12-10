@@ -276,15 +276,15 @@ class ArtifactReader():
 
     def getMainOption(self, result):
         pos = ""
-        if "生の花" in result:
+        if "生の" in result or "の花" in result:
             return ("hp", "生の花")
-        elif "死の羽" in result:
+        elif "死の" in result or "の羽" in result:
             return ("atk", "死の羽")
-        elif "時の砂" in result:
+        elif "時の" in result or "の砂" in result:
             pos = "時の砂"
-        elif "空の杯" in result:
+        elif "空の" in result or "の杯" in result:
             pos = "空の杯"
-        elif "理の冠" in result:
+        elif "理の" in result or "の冠" in result:
             pos = "理の冠"
 
         # 時計、杯、冠の場合

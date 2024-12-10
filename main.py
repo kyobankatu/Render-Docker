@@ -275,7 +275,7 @@ class ArtifactReader():
             return None
 
     def getMainOption(self, result):
-        pos = ""
+        pos = "生の花"
         if "生の" in result or "の花" in result:
             return ("hp", "生の花")
         elif "死の" in result or "の羽" in result:

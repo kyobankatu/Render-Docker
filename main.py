@@ -292,7 +292,7 @@ class ArtifactReader():
         for op in MAIN_OP:
                 if op[0] in text_around_op:
                     return (op[1], pos)    
-        return None
+        return ("hp", "生の花")
 
     
     def resource_path(self, relative_path):

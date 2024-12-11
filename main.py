@@ -49,7 +49,7 @@ def scan_img():
 
     img_gray = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2GRAY)
     # 閾値の設定
-    threshold = 150
+    threshold = 147
     # 二値化(閾値100を超えた画素を255にする。)
     ret, img_edited = cv2.threshold(img_gray, threshold, 255, cv2.THRESH_BINARY)
     
@@ -275,25 +275,32 @@ class ArtifactReader():
             return None
 
     def getMainOption(self, result):
-        pos = "生の花"
-        if "生の" in result or "の花" in result:
-            return ("hp", "生の花")
-        elif "死の" in result or "の羽" in result:
-            return ("atk", "死の羽")
-        elif "時の" in result or "の砂" in result:
-            pos = "時の砂"
-        elif "空の" in result or "の杯" in result:
-            pos = "空の杯"
-        elif "理の" in result or "の冠" in result:
-            pos = "理の冠"
-
+        pos = self.getPosition(result.split("\n", 1)[1])
+        if (pos == None):
+            pos = self.getPosition(result)
+        if (pos == None):
+            pos = "生の花"
+        
         # 時計、杯、冠の場合
         text_around_op = self.getTextAroundMainOp(result, pos)
         for op in MAIN_OP:
                 if op[0] in text_around_op:
-                    return (op[1], pos)    
+                    return (op[1], pos)
         return ("hp", "生の花")
 
+    def getPosition(self, text):
+        if "生の" in text or "の花" in text:
+            return "生の花"
+        elif "死の" in text or "の羽" in text:
+            return "死の羽"
+        elif "時の" in text or "の砂" in text:
+            return "時の砂"
+        elif "空の" in text or "の杯" in text:
+            return "空の杯"
+        elif "理の" in text or "の冠" in text:
+            return "理の冠"
+        else:
+            return None
     
     def resource_path(self, relative_path):
         if hasattr(sys, '_MEIPASS'):

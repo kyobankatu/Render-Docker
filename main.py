@@ -49,7 +49,7 @@ def scan_img():
 
     img_gray = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2GRAY)
     # 閾値の設定
-    threshold = 147
+    threshold = 150
     # 二値化(閾値100を超えた画素を255にする。)
     ret, img_edited = cv2.threshold(img_gray, threshold, 255, cv2.THRESH_BINARY)
     
@@ -280,6 +280,11 @@ class ArtifactReader():
             pos = self.getPosition(result)
         if (pos == None):
             pos = "生の花"
+        
+        if (pos == "生の花"):
+            return ("hp", "生の花")
+        if (pos == "死の羽"):
+            return ("atk", "死の羽")
         
         # 時計、杯、冠の場合
         text_around_op = self.getTextAroundMainOp(result, pos)

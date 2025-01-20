@@ -4,5 +4,5 @@ Gunicorn
 numpy
 matplotlib
 pillow
-pyocr
-tesseract
+google-cloud-vision
+requests

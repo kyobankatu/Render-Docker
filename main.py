@@ -3,15 +3,15 @@ from flask_cors import CORS
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-import pyocr
 import cv2
 import io
+from io import BytesIO
 import math
 import sys
 import os
 import re
-
-import pyocr.tesseract
+import requests
+import base64
 
 # 定数
 CRIT = np.array([54, 62, 70, 78])
@@ -31,6 +31,8 @@ MAIN_OP = [("HP", "hp%"),
            ("会心率", "crit-rate"),
            ("会心ダメージ", "crit-dmg"),
            ("治療効果", "heal")]
+
+POSITION = ["生の花", "死の羽", "時の砂", "空の杯", "理の冠"]
 
 app = Flask(__name__)
 
@@ -57,9 +59,9 @@ def scan_img():
     if img.ndim == 2: # モノクロ
         pass
     elif img.shape[2] == 3: # カラー
-        img = cv2.cvtColor(img, COLOR_BGR2RGB)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     elif img.shape[2] == 4: # 透過
-        img = cv2.cvtColor(img, COLOR_BGRA2RGBA)
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
     
     # numpy.ndarray を Pillow Image に変換
     img_pil = Image.fromarray(img)
@@ -205,19 +207,29 @@ def get_data():
 
 class ArtifactReader():
     def __init__(self, img, score_type):
-        # OCR設定
-        self.tools = pyocr.get_available_tools()
-        #OCRエンジンを取得する
-        if len(self.tools) == 0:
-            print("OCRエンジンが指定されていません")
+        self.api_key = os.getenv("GOOGLE_CLOUD_VISION_API_KEY")
+        if self.api_key is None:
+            print("環境変数 'GOOGLE_CLOUD_VISION_API_KEY' が設定されていません。")
             sys.exit(1)
-        else:
-            self.tool = self.tools[0]
+
+        # Pillowの画像をバイナリデータに変換し、base64エンコード
+        self.buffered = BytesIO()
+        img.save(self.buffered, format="PNG")
+        self.img_base64 = base64.b64encode(self.buffered.getvalue()).decode("utf-8")
         
         # 文字を読み取る
-        self.img = img
-        self.builder = pyocr.builders.TextBuilder(tesseract_layout=6)
-        self.result = self.tool.image_to_string(self.img,lang="jpn", builder=self.builder)
+        self.url = f"https://vision.googleapis.com/v1/images:annotate?key={self.api_key}"
+        self.request_payload = {
+            "requests": [
+                {
+                    "image": {"content": self.img_base64},
+                    "features": [{"type": "TEXT_DETECTION"}],
+                }
+            ]
+        }
+
+        self.response = requests.post(self.url, json=self.request_payload)
+        self.result = self.response.json()["responses"][0]["textAnnotations"][0]["description"]
 
         self.option = 0
         self.pos = None
@@ -294,23 +306,10 @@ class ArtifactReader():
         return ("hp", "生の花")
 
     def getPosition(self, text):
-        if "生の" in text or "の花" in text:
-            return "生の花"
-        elif "死の" in text or "の羽" in text:
-            return "死の羽"
-        elif "時の" in text or "の砂" in text:
-            return "時の砂"
-        elif "空の" in text or "の杯" in text:
-            return "空の杯"
-        elif "理の" in text or "の冠" in text:
-            return "理の冠"
-        else:
-            return None
-    
-    def resource_path(self, relative_path):
-        if hasattr(sys, '_MEIPASS'):
-            return os.path.join(sys._MEIPASS, relative_path)
-        return os.path.join(os.path.abspath("."), relative_path)
+        for pos in POSITION:
+            if pos in text:
+                return pos
+        return None
           
     def find(self, result,str):
         return [result[m.start()+len(str)-1:m.start()+len(str)+4] for m in re.finditer(str, result)]

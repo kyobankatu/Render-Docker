@@ -284,7 +284,7 @@ class ArtifactReader():
             return ("atk", "死の羽")
         
         # 時計、杯、冠の場合
-        main_op = result.split("\n", 1)[2]
+        main_op = result.split("\n")[2]
         for op in MAIN_OP:
             if op[0] in main_op:
                 return (op[1], pos)

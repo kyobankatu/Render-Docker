@@ -51,8 +51,8 @@ def scan_img():
 
     img_gray = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2GRAY)
     # 閾値の設定
-    threshold = 150
-    # 二値化(閾値100を超えた画素を255にする。)
+    threshold = 140
+    # 二値化(閾値140を超えた画素を255にする。)
     ret, img_edited = cv2.threshold(img_gray, threshold, 255, cv2.THRESH_BINARY)
     
     img = img_edited.copy()
@@ -224,6 +224,9 @@ class ArtifactReader():
                 {
                     "image": {"content": self.img_base64},
                     "features": [{"type": "TEXT_DETECTION"}],
+                    "imageContext": {
+                        "languageHints": ["ja", "en"]
+                    }
                 }
             ]
         }
@@ -243,7 +246,7 @@ class ArtifactReader():
         self.score_type = score_type
 
         # オプション数
-        self.option = len(self.find(self.result, r'\+'))
+        self.option = len(self.find(self.result, r'・'))
 
         # メインオプション
         (self.main_op, self.pos) = self.getMainOption(self.result)
@@ -267,24 +270,6 @@ class ArtifactReader():
             self.init_score = self.getScore_hp(self.result)
         elif score_type == "em" :
             self.init_score = self.getScore_em(self.result)
-    
-    def getTextAroundMainOp(self, text, word):
-        # 単語の終了位置を探す
-        start_idx = text.find(word)
-        start_idx += len(word)
-
-        # 文字列に%が含まれない場合(メインが元素熟知)
-        if not "%" in text[start_idx:]:
-            return "元素熟知"
-        # 単語の終了位置から%が出るまでの文字列を抽出(ここを\dで検知すると、誤検知する聖遺物がある)
-        match = re.search(r'%', text[start_idx:])
-        if match is not None:
-            res = text[start_idx:start_idx + match.start()]
-            if "元素熟知" in res:
-                res = "元素熟知"
-            return res
-        else:
-            return None
 
     def getMainOption(self, result):
         pos = self.getPosition(result.split("\n", 1)[1])
@@ -299,10 +284,10 @@ class ArtifactReader():
             return ("atk", "死の羽")
         
         # 時計、杯、冠の場合
-        text_around_op = self.getTextAroundMainOp(result, pos)
+        main_op = result.split("\n", 1)[2]
         for op in MAIN_OP:
-                if op[0] in text_around_op:
-                    return (op[1], pos)
+            if op[0] in main_op:
+                return (op[1], pos)
         return ("hp", "生の花")
 
     def getPosition(self, text):

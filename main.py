@@ -297,12 +297,12 @@ class ArtifactReader():
         return None
           
     def find(self, result,str):
-        return [result[m.start():m.end()] for m in re.finditer(str, result)]
+        return [result[m.start()+len(str)-1:m.start()+len(str)+4] for m in re.finditer(str, result)]
 
     def getFigure(self, data):
         for str in data:
-            if "+" in str:
-                return float(re.sub(r'\s*[\+\-]?\s*', '', str.split("+")[1]).split("%")[0])
+            if(str.find('%') != -1):
+                return float(str.split('%')[0])
         return 0
     
     def getFigure_em(self, data):
@@ -312,39 +312,39 @@ class ArtifactReader():
 
     def getScore_attack(self, result):
         score = 0
-        score += self.getFigure(self.find(result,r'会心ダメージ\s*\+\s*\d+(\.\d+)?%'))
-        score += self.getFigure(self.find(result,r'会心率\s*\+\s*\d+(\.\d+)?%')) * 2
-        score += self.getFigure(self.find(result,r'攻撃力\s*\+\s*\d+(\.\d+)?%'))
+        score += self.getFigure(self.find(result.replace(" ", ""), r'会心ダメージ\+'))
+        score += self.getFigure(self.find(result.replace(" ", ""),r'会心率\+')) * 2
+        score += self.getFigure(self.find(result.replace(" ", ""),r'攻撃力\+'))
         return round(score,1)
     
     def getScore_hp(self, result):
         score = 0
-        score += self.getFigure(self.find(result,r'会心ダメージ\s*\+\s*\d+(\.\d+)?%'))
-        score += self.getFigure(self.find(result,r'会心率\s*\+\s*\d+(\.\d+)?%')) * 2
-        score += self.getFigure(self.find(result,r'HP\s*\+\s*\d+(\.\d+)?%'))
+        score += self.getFigure(self.find(result.replace(" ", ""),r'会心ダメージ\+'))
+        score += self.getFigure(self.find(result.replace(" ", ""),r'会心率\+')) * 2
+        score += self.getFigure(self.find(result.replace(" ", ""),r'HP\+'))
         return round(score,1)
 
     def getScore_em(self, result):
         score = 0
-        score += self.getFigure(self.find(result,r'会心ダメージ\s*\+\s*\d+(\.\d+)?%'))
-        score += self.getFigure(self.find(result,r'会心率\s*\+\s*\d+(\.\d+)?%')) * 2
-        score += self.getFigure(self.find(result,r'元素熟知\s*\+\s*\d*')) / 4
+        score += self.getFigure(self.find(result.replace(" ", ""),r'会心ダメージ\+'))
+        score += self.getFigure(self.find(result.replace(" ", ""),r'会心率\+')) * 2
+        score += self.getFigure_em(self.find(result.replace(" ", ""),r'元素熟知\+')) / 4
         return round(score,1)
     
     def contains_crti_dmg(self, result):
-        return self.getFigure(self.find(result,r'会心ダメージ\s*\+\s*\d+(\.\d+)?%')) > 0
+        return self.getFigure(self.find(result.replace(" ", ""),r'会心ダメージ\+')) > 0
     
     def contains_crti_rate(self, result):
-        return self.getFigure(self.find(result,r'会心率\s*\+\s*\d+(\.\d+)?%')) > 0
+        return self.getFigure(self.find(result.replace(" ", ""),r'会心率\+')) > 0
     
     def contains_atk(self, result):
-        return self.getFigure(self.find(result,r'攻撃力\s*\+\s*\d+(\.\d+)?%')) > 0
+        return self.getFigure(self.find(result.replace(" ", ""),r'攻撃力\+')) > 0
 
     def contains_hp(self, result):
-        return self.getFigure(self.find(result,r'HP\s*\+\s*\d+(\.\d+)?%')) > 0
+        return self.getFigure(self.find(result.replace(" ", ""),r'HP\+')) > 0
     
     def contains_em(self, result):
-        return self.getFigure_em(self.find(result,r'元素熟知\s*\+\s*\d*')) > 0
+        return self.getFigure_em(self.find(result.replace(" ", ""),r'元素熟知\+')) > 0
 
 class Calculator():
     def __init__(self, option, main_op , is_crit_dmg, is_crit_rate, is_atk, is_hp, is_em, nums, init_score, score, count, score_type):

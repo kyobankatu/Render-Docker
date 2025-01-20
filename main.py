@@ -299,7 +299,7 @@ class ArtifactReader():
     def find(self, result,str):
         return [result[m.start():m.end()] for m in re.finditer(str, result)]
 
-    def getFigure(data):
+    def getFigure(self, data):
         for str in data:
             if "+" in str:
                 return float(re.sub(r'\s*[\+\-]?\s*', '', str.split("+")[1]).split("%")[0])

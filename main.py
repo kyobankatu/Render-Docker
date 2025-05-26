@@ -71,7 +71,17 @@ def scan_img():
 
     res = ArtifactReader(img_pil, score_type)
 
-    return jsonify({"option" : res.option, "position" : res.pos, "main_op" : res.main_op, "is_crit_dmg" : res.is_crit_dmg, "is_crit_rate" : res.is_crit_rate, "is_atk" : res.is_atk, "is_hp" : res.is_hp, "is_em" : res.is_em, "init" : res.init_score, "score_type" : res.score_type})
+    return jsonify({"option" : res.option,
+                    "position" : res.pos,
+                    "main_op" : res.main_op,
+                    "is_crit_dmg" : res.is_crit_dmg,
+                    "is_crit_rate" : res.is_crit_rate,
+                    "is_atk" : res.is_atk,
+                    "is_hp" : res.is_hp,
+                    "is_em" : res.is_em,
+                    "init" : res.init_score,
+                    "score_type" : res.score_type,
+                    "level" : res.level})
 
 @app.route("/get-dist", methods=["POST"])
 def get_dist():
@@ -244,9 +254,14 @@ class ArtifactReader():
         self.is_em = False
         self.init_score = 0
         self.score_type = score_type
+        self.level = 0
 
         # オプション数
         self.option = len(self.find(self.result, r'\+')) - 1
+        if self.option < 3:
+            self.option = 3
+        elif self.option > 4:
+            self.option = 4
 
         # メインオプション
         (self.main_op, self.pos) = self.getMainOption(self.result)
@@ -270,6 +285,11 @@ class ArtifactReader():
             self.init_score = self.getScore_hp(self.result)
         elif score_type == "em" :
             self.init_score = self.getScore_em(self.result)
+        
+        # レベル
+        self.level = int(self.find(self.result, r'\+')[0].split("\n")[0])
+        if self.level < 0 or self.level > 20:
+            self.level = 0
 
     def getMainOption(self, result):
         pos = self.getPosition(result.split("\n", 1)[1])

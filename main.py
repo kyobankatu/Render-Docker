@@ -246,7 +246,7 @@ class ArtifactReader():
         self.score_type = score_type
 
         # オプション数
-        self.option = len(self.find(self.result, r'・'))
+        self.option = len(self.find(self.result, r'\+')) - 1
 
         # メインオプション
         (self.main_op, self.pos) = self.getMainOption(self.result)
@@ -296,7 +296,7 @@ class ArtifactReader():
                 return pos
         return None
           
-    def find(self, result,str):
+    def find(self, result, str):
         return [result[m.start()+len(str)-1:m.start()+len(str)+4] for m in re.finditer(str, result)]
 
     def getFigure(self, data):
